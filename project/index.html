@@ -23,6 +23,13 @@
       margin-bottom: 1rem;
       letter-spacing: 2px;
     }
+    h2 {
+      text-align: center;
+      color: #3b2f2f;
+      font-size: 1.8rem;
+      margin: 1.5rem 0 1rem;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    }
     .datetime-display {
       text-align: center;
       font-size: 1.3rem;
@@ -78,12 +85,42 @@
 <body>
   <h1>Rara's Daily Routine</h1>
   <div class="datetime-display" id="current-datetime">Memuat waktu...</div>
-  <div id="task-list">
-    <p class="fallback-message">Memuat daftar tugas... Buka di Safari untuk pengalaman interaktif.</p>
+  
+  <h2 id="schedule-title" style="display: none;">Jadwal Kuliah</h2>
+  <div id="schedule-list">
+    <p class="fallback-message">Fitur interaktif tidak tersedia di Quick Look. Buka di Safari untuk pengalaman penuh.</p>
   </div>
-  <div class="footer">Checklist akan di-reset setiap hari. Untuk pengalaman terbaik, buka di Safari.</div>
+  
+  <h2>Daily Tasks</h2>
+  <div id="task-list">
+    <p class="fallback-message">Fitur interaktif tidak tersedia di Quick Look. Buka di Safari untuk pengalaman penuh.</p>
+  </div>
 
   <script>
+const collegeSchedule = {
+  Sunday: [],
+  Monday: [
+    "📚 Hukum Pidana (08:00 - 09:40)",
+    "📚 Hukum Dagang (09:50 - 11:30)"
+  ],
+  Tuesday: [
+    "📚 Hukum Islam (08:00 - 09:40)",
+    "📚 Hukum Administrasi Negara (09:50 - 11:30)"
+  ],
+  Wednesday: [
+    "📚 Hukum Pidana (08:00 - 09:40)"
+  ],
+  Thursday: [
+    "📚 Hukum Islam (08:00 - 09:40)",
+    "📚 Hukum Dagang (09:50 - 11:30)"
+  ],
+  Friday: [
+    "📚 Hukum Internasional (10:00 - 12:30)",
+    "📚 Hukum dan HAM (16:30 - 18:15)"
+  ],
+  Saturday: []
+};
+
 const dailyTasks = {
   Sunday: [
     "🌙 Tahajud",
@@ -184,7 +221,7 @@ const dailyTasks = {
     "🧼 Skincare Malam"
   ],
   Thursday: [
-    "🧹 Piket5 Rumah",
+    "🧹 Piket Rumah",
     "🌙 Tahajud",
     "🌤️ Qobliyah Subuh",
     "🕌 Shalat Subuh",
@@ -259,8 +296,11 @@ const dailyTasks = {
 
     // Cek apakah JavaScript berfungsi
     document.addEventListener('DOMContentLoaded', () => {
+      const scheduleList = document.getElementById('schedule-list');
       const taskList = document.getElementById('task-list');
+      const scheduleTitle = document.getElementById('schedule-title');
       if (!window.localStorage) {
+        scheduleList.innerHTML = '<p class="fallback-message">Fitur interaktif tidak tersedia di Quick Look. Buka di Safari untuk pengalaman penuh.</p>';
         taskList.innerHTML = '<p class="fallback-message">Fitur interaktif tidak tersedia di Quick Look. Buka di Safari untuk pengalaman penuh.</p>';
         return;
       }
@@ -268,33 +308,68 @@ const dailyTasks = {
       const today = new Date();
       const dayName = today.toLocaleString('en-US', { weekday: 'long' });
       const dateKey = today.toDateString();
-      const tasks = dailyTasks[dayName];
 
       // Display current date, day, and time
       function displayDateTime() {
         const now = new Date();
-        const dayName = now.toLocaleString('id-ID', { weekday: 'long' });
+        const dayNameID = now.toLocaleString('id-ID', { weekday: 'long' });
         const dateString = now.toLocaleDateString('id-ID', {
           day: 'numeric',
           month: 'long',
           year: 'numeric'
         });
         const timeString = now.toLocaleTimeString('id-ID', { hour12: false });
-        document.getElementById('current-datetime').textContent = `${dayName}, ${dateString} - ${timeString}`;
+        document.getElementById('current-datetime').textContent = `${dayNameID}, ${dateString} - ${timeString}`;
       }
       displayDateTime();
       setInterval(displayDateTime, 1000);
 
-      // Task list handling
-      const savedData = JSON.parse(localStorage.getItem('dailyTasks')) || {};
+      // College schedule handling
+      const scheduleTasks = collegeSchedule[dayName] || [];
+      if (scheduleTasks.length > 0) {
+        scheduleTitle.style.display = 'block';
+        const savedSchedule = JSON.parse(localStorage.getItem('collegeSchedule')) || {};
+        if (savedSchedule.date !== dateKey) {
+          savedSchedule.date = dateKey;
+          savedSchedule.status = {};
+          scheduleTasks.forEach(task => savedSchedule.status[task] = false);
+          localStorage.setItem('collegeSchedule', JSON.stringify(savedSchedule));
+        }
+        scheduleList.innerHTML = ''; // Bersihkan fallback message
+        scheduleTasks.forEach(task => {
+          const div = document.createElement('div');
+          div.className = 'task';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.checked = savedSchedule.status[task] || false;
+          const label = document.createElement('label');
+          label.textContent = task;
+          if (checkbox.checked) label.classList.add('checked');
 
+          checkbox.addEventListener('change', () => {
+            savedSchedule.status[task] = checkbox.checked;
+            localStorage.setItem('collegeSchedule', JSON.stringify(savedSchedule));
+            label.classList.toggle('checked', checkbox.checked);
+          });
+
+          div.appendChild(checkbox);
+          div.appendChild(label);
+          scheduleList.appendChild(div);
+        });
+      } else {
+        scheduleTitle.style.display = 'none';
+        scheduleList.innerHTML = ''; // Kosongkan jika tidak ada jadwal
+      }
+
+      // Daily tasks handling
+      const tasks = dailyTasks[dayName];
+      const savedData = JSON.parse(localStorage.getItem('dailyTasks')) || {};
       if (savedData.date !== dateKey) {
         savedData.date = dateKey;
         savedData.status = {};
         tasks.forEach(task => savedData.status[task] = false);
         localStorage.setItem('dailyTasks', JSON.stringify(savedData));
       }
-
       taskList.innerHTML = ''; // Bersihkan fallback message
       tasks.forEach(task => {
         const div = document.createElement('div');
@@ -320,4 +395,3 @@ const dailyTasks = {
   </script>
 </body>
 </html>
-
